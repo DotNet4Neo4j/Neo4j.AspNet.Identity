@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Neo4j.AspNet.Identity</id>
+    <version>0.0.1</version>
+    <authors>Antonio Sergio Simoes</authors>
+    <owners>Antonio Sergio Simoes</owners>
+    <licenseUrl>https://github.com/assimoes/Neo4j.AspNet.Identity/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/assimoes/Neo4j.AspNet.Identity</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Custom ASP.NET Identity to use with a Neo4j Graph Database backend</description>
+    <tags>AspNet.Identity Neo4j OpenID/OAuth</tags>
+    <dependencies>
+      <dependency id="Neo4jClient" version="1.0.0.656" />
+      <dependency id="Microsoft.AspNet.Identity.Core" version="2.0.1" />
+    </dependencies>
+  </metadata>
+</package>
