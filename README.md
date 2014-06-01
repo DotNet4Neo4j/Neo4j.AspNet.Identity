@@ -23,7 +23,7 @@ ASP.NET MVC 5 shipped with a new Identity system (in the Microsoft.AspNet.Identi
 
 ###### Instructions
 
-These instructions assume you know how to set up MongoDB within an MVC application.
+These instructions assume you know how to set up Neo4j within an MVC application.
 
 1. Create a new ASP.NET MVC 5 project, choosing the Individual User Accounts authentication type.
   1.1 Remove the Entity Framework packages and replace with Neo4j Identity:
