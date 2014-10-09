@@ -148,7 +148,7 @@ namespace Neo4j.AspNet.Identity
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            _disposed = true;
         } 
         #endregion
 
