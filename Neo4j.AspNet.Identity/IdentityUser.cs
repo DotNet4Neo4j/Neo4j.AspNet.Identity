@@ -1,49 +1,43 @@
-﻿using Microsoft.AspNet.Identity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Neo4j.AspNet.Identity
+﻿namespace Neo4j.AspNet.Identity
 {
+    using System;
+    using System.Collections.Generic;
+    using Microsoft.AspNet.Identity;
+    using Newtonsoft.Json;
+
     public class IdentityUser : IUser
     {
-
-
         public IdentityUser()
         {
-            this.Claims = new List<IdentityUserClaim>();
-            this.Roles = new List<string>();
-            this.Logins = new List<UserLoginInfo>();
+            Claims = new List<IdentityUserClaim>();
+            Roles = new List<string>();
+            Logins = new List<UserLoginInfo>();
+            CreateDateUtc = DateTimeOffset.UtcNow;
         }
 
-        public IdentityUser(string username) :  this()
+        public IdentityUser(string username)
+            : this()
         {
-            this.UserName = username;
-        }
-        public virtual string Id
-        {
-            get;
-            set;
+            UserName = username;
         }
 
-        public virtual string UserName
-        {
-            get;
-            set;
-        }
-
+        public string DisplayName { get; set; }
+        public DateTimeOffset LastLoginDateUtc { get; set; }
+        public DateTimeOffset CreateDateUtc { get; set; }
+        public string PhoneNumber { get; set; }
+        public bool PhoneNumberConfirmed { get; set; }
         public virtual string PasswordHash { get; set; }
-
         public virtual string SecurityStamp { get; set; }
-
         public virtual string Email { get; set; }
-
         public virtual List<string> Roles { get; set; }
 
+        [JsonIgnore]
         public virtual List<IdentityUserClaim> Claims { get; set; }
 
+        [JsonIgnore]
         public virtual List<UserLoginInfo> Logins { get; set; }
+
+        public virtual string Id { get; set; }
+        public virtual string UserName { get; set; }
     }
 }
