@@ -25,26 +25,46 @@ ASP.NET MVC 5 shipped with a new Identity system (in the Microsoft.AspNet.Identi
 
 These instructions assume you know how to set up Neo4j within an MVC application.
 
+###### Using 
+
 1. Create a new ASP.NET MVC 5 project, choosing the Individual User Accounts authentication type.
-  1.1 Remove the Entity Framework packages and replace with Neo4j Identity:
-  1.2 Uninstall-Package Microsoft.AspNet.Identity.EntityFramework
-  1.3 Uninstall-Package EntityFramework
-  1.4 Install-Package Neo4j.AspNet.Identity
+    1. Update all Nuget packages to latest versions (in particular 'Microsoft ASP.NET Identity Core')
+    2. Install-Package Neo4jClient
+    3. Remove the Entity Framework packages and replace with Neo4j Identity:
+        1. Uninstall-Package Microsoft.AspNet.Identity.EntityFramework
+        2. Uninstall-Package EntityFramework
+    4. Reference the dll you've built, or even better add the project to your solution and reference it directly
 
-2. In ~/Models/IdentityModels.cs:
-  2.1 Remove the namespace: Microsoft.AspNet.Identity.EntityFramework
-  2.2 Add the namespace: Neo4j.AspNet.Identity
-  2.3 Remove the ApplicationDbContext class completely.
-3. In ~/Controllers/AccountController.cs
-  3.1 Remove the namespace: Microsoft.AspNet.Identity.EntityFramework
-  3.2 Add the connection string name to the constructor of the UserStore. Or empty constructor will use DefaultConnection
+2. Delete ~/Models/IdentityModels.cs
+3. In ~/App_Start/IndentityConfig.cs
+    1. Change the 'ApplicationUserManager' to use the Neo4jUserStore (as below)
+    2. Change the 'ApplicationUserManager' to get the GraphClient from Owin (as below)
 
-        public AccountController()
-        {
-            this.UserManager = new UserManager<ApplicationUser>(
-                new UserStore<ApplicationUser>("http://localhost:7474/db/data" /* or use the Web.config connectionstrings key*/);
-        }
+    var manager = new ApplicationUserManager(new Neo4jUserStore<ApplicationUser>(context.Get<GraphClientWrapper>().GraphClient));
+
+4. In ~/App_Start/Startup.Auth.cs
+    1. Add 'using Neo4j.AspNet.Identity'
+    2. Add the following Method:
+
+    private void ConfigureNeo4j(IAppBuilder app)
+    {
+        app.CreatePerOwinContext(() => {
+            var gc = new GraphClient(new Uri("http://localhost.:7474/db/data"));
+            gc.Connect();
+            var gcw = new GraphClientWrapper(gc);
+            return gcw;
+        });
+    }
+
+    3. Replace the line about creating the ApplicationDbContext (app.CreatePerOwinContext(ApplicationDbContext.Create);) with:
+
+    ConfigureNeo4j(app);
+
+5. In ~/Controllers/AccountController.cs
+    1. Remove the namespace: Microsoft.AspNet.Identity.EntityFramework
+    2. Add the namespace: using Neo4j.AspNet.Identity
+
         
 ###### Credits
 
-A special thank to [David Boike](https://github.com/DavidBoike) and [Jonathan Sheely](https://github.com/jsheely) for the inspiration provided with their projects. [RavenDB ASP.NET Identity](https://github.com/ILMServices/RavenDB.AspNet.Identity.) and [MongoDB ASP.NET Identity](https://github.com/InspectorIT/MongoDB.AspNet.Identity) respectively. Much love!
+A special thank you to [David Boike](https://github.com/DavidBoike) and [Jonathan Sheely](https://github.com/jsheely) for the inspiration provided with their projects. [RavenDB ASP.NET Identity](https://github.com/ILMServices/RavenDB.AspNet.Identity.) and [MongoDB ASP.NET Identity](https://github.com/InspectorIT/MongoDB.AspNet.Identity) respectively. Much love!

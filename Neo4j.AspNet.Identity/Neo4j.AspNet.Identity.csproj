@@ -9,11 +9,12 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Neo4j.AspNet.Identity</RootNamespace>
     <AssemblyName>Neo4j.AspNet.Identity</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\MongoDB.AspNet.Identity-master\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <NuGetPackageImportStamp>da87194c</NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -94,7 +95,6 @@
     <Compile Include="IdentityUserClaim.cs" />
     <Compile Include="ApplicationUser.cs" />
     <Compile Include="Neo4jUserJsonConverter.cs" />
-    <Compile Include="Neo4jUserManager.cs" />
     <Compile Include="Neo4jUserStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="LookupItems.cs" />
