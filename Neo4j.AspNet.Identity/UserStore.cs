@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace Neo4j.AspNet.Identity
 {
+    [Obsolete("Please switch to using the Neo4j.AspNet.Identity.Neo4jUserStore class instead", true)]
     public class UserStore<TUser> : IUserLoginStore<TUser>, IUserClaimStore<TUser>, IUserRoleStore<TUser>,
         IUserPasswordStore<TUser>, IUserSecurityStampStore<TUser>, IUserStore<TUser>, IUserEmailStore<TUser>
         where TUser : IdentityUser
