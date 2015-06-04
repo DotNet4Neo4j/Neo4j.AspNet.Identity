@@ -67,4 +67,6 @@ These instructions assume you know how to set up Neo4j within an MVC application
         
 ###### Credits
 
-A special thank you to [David Boike](https://github.com/DavidBoike) and [Jonathan Sheely](https://github.com/jsheely) for the inspiration provided with their projects. [RavenDB ASP.NET Identity](https://github.com/ILMServices/RavenDB.AspNet.Identity.) and [MongoDB ASP.NET Identity](https://github.com/InspectorIT/MongoDB.AspNet.Identity) respectively. Much love!
+A special thank you to [David Boike](https://github.com/DavidBoike) and [Jonathan Sheely](https://github.com/jsheely) for the inspiration provided with their projects. [RavenDB ASP.NET Identity](https://github.com/ILMServices/RavenDB.AspNet.Identity.) and [MongoDB ASP.NET Identity](https://github.com/InspectorIT/MongoDB.AspNet.Identity) respectively. 
+
+A big thank you to [Antonio Sergio Simoes](https://github.com/assimoes), for starting this whole thing up :)
