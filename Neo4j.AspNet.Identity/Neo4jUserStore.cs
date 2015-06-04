@@ -8,7 +8,7 @@ namespace Neo4j.AspNet.Identity
     using Microsoft.AspNet.Identity;
     using Neo4jClient;
     using Neo4jClient.Cypher;
-    
+
     public class Neo4jUserStore<TUser> :
         IUserLoginStore<TUser>,
         IUserClaimStore<TUser>,
@@ -19,7 +19,7 @@ namespace Neo4j.AspNet.Identity
         IUserEmailStore<TUser>,
         IUserLockoutStore<TUser, object>,
         IUserTwoFactorStore<TUser, string>,
-        IUserPhoneNumberStore<TUser> 
+        IUserPhoneNumberStore<TUser>
         where TUser : IdentityUser, IUser<string>, new()
     {
         private bool _disposed;
@@ -36,20 +36,37 @@ namespace Neo4j.AspNet.Identity
                 throw new ObjectDisposedException(GetType().Name);
         }
 
-        #region IUserLoginStore
+        #region Internal Classes for Serialization
 
-        public async Task AddLoginAsync(TUser user, UserLoginInfo login)
+        private class FindUserResult<T>
+            where T : IdentityUser, new()
         {
-            Throw.ArgumentException.IfNull(user, "user");
-            Throw.ArgumentException.IfNull(login, "login");
+            public T User { private get; set; }
+            public IEnumerable<Node<Neo4jUserLoginInfo>> Logins { private get; set; }
+            public IEnumerable<Node<IdentityUserClaim>> Claims { private get; set; }
+            public IEnumerable<Node<Role>> Roles { private get; set; }
 
-            ThrowIfDisposed();
-
-            if (!user.Logins.Any(x => x.LoginProvider == login.LoginProvider && x.ProviderKey == login.ProviderKey))
-                user.Logins.Add(login);
+            public T Combine()
+            {
+                var output = User;
+                if (Logins != null)
+                    output.Logins = new List<UserLoginInfo>(Logins.Select(l => l.Data.ToUserLoginInfo()));
+                if (Claims != null)
+                    output.Claims = new List<IdentityUserClaim>(Claims.Select(l => l.Data));
+                if (Roles != null)
+                    output.Roles = new List<string>(Roles.Select(r => r.Data.Name));
+                return output;
+            }
         }
 
-        internal class Neo4jUserLoginInfo
+        // ReSharper disable once ClassNeverInstantiated.Local
+        private class Role
+        {
+            public string Name { get; set; }
+        }
+        
+        // ReSharper disable once ClassNeverInstantiated.Local
+        private class Neo4jUserLoginInfo
         {
             /// <summary>
             ///     Provider for the linked login, i.e. Facebook, Google, etc.
@@ -66,36 +83,51 @@ namespace Neo4j.AspNet.Identity
                 return new UserLoginInfo(LoginProvider, ProviderKey);
             }
         }
+        #endregion Internal Classes for Serialization
 
+        #region IUserLoginStore
+        public async Task AddLoginAsync(TUser user, UserLoginInfo login)
+        {
+            Throw.ArgumentException.IfNull(user, "user");
+            Throw.ArgumentException.IfNull(login, "login");
 
+            ThrowIfDisposed();
+            await Task.Run(() =>
+            {
+                if (!user.Logins.Any(x => x.LoginProvider == login.LoginProvider && x.ProviderKey == login.ProviderKey))
+                    user.Logins.Add(login);
+            });
+        }
+        
         public async Task<TUser> FindAsync(UserLoginInfo login)
         {
             Throw.ArgumentException.IfNull(login, "login");
             ThrowIfDisposed();
 
             var results = await _graphClient.Cypher
-                .Match("(l:" + Labels.Login + ")<-[:" + Relationship.HasLogin + "]-(u:" + Labels.User + ")")
+                .Match(string.Format("(l:{0})<-[:{1}]-(u:{2})", Labels.Login, Relationship.HasLogin, Labels.User))
                 .Where((UserLoginInfo l) => l.ProviderKey == login.ProviderKey)
                 .AndWhere((UserLoginInfo l) => l.LoginProvider == login.LoginProvider)
-                .OptionalMatch("(u)-[:"+ Relationship.HasClaim + "]->(c:" + Labels.Claim + ")")
-                .Return((u,c,l) => new FindUserResult<TUser>
+                .OptionalMatch(string.Format("(u)-[:{0}]->(c:{1})", Relationship.HasClaim, Labels.Claim))
+                .OptionalMatch(string.Format("(u)-[:{0}]->(r:{1})", Relationship.InRole, Labels.Role))
+                .Return((u, c, l, r) => new FindUserResult<TUser>
                 {
                     User = u.As<TUser>(),
                     Logins = l.CollectAs<Neo4jUserLoginInfo>(),
-                    Claims = c.CollectAs<IdentityUserClaim>()
+                    Claims = c.CollectAs<IdentityUserClaim>(),
+                    Roles = r.CollectAs<Role>()
                 }).ResultsAsync;
 
             var result = results.SingleOrDefault();
-            if (result == null)
-                return null;
-            return result.Combine();
+            return result == null ? null : result.Combine();
         }
 
         public async Task<IList<UserLoginInfo>> GetLoginsAsync(TUser user)
         {
             Throw.ArgumentException.IfNull(user, "user");
             ThrowIfDisposed();
-            return user.Logins as IList<UserLoginInfo>;
+
+            return await Task.Run(() => user.Logins as IList<UserLoginInfo>);
         }
 
         public async Task RemoveLoginAsync(TUser user, UserLoginInfo login)
@@ -103,7 +135,8 @@ namespace Neo4j.AspNet.Identity
             Throw.ArgumentException.IfNull(user, "user");
             Throw.ArgumentException.IfNull(login, "login");
             ThrowIfDisposed();
-            user.Logins.RemoveAll(x => x.LoginProvider == login.LoginProvider && x.ProviderKey == login.ProviderKey);
+
+            await Task.Run(() => user.Logins.RemoveAll(x => x.LoginProvider == login.LoginProvider && x.ProviderKey == login.ProviderKey));
         }
 
         public async Task CreateAsync(TUser user)
@@ -113,9 +146,12 @@ namespace Neo4j.AspNet.Identity
             ThrowIfDisposed();
 
             user.Id = Guid.NewGuid().ToString();
-            await _graphClient.Cypher.Create("(u:User { user })")
-                .WithParams(new {user})
-                .ExecuteWithoutResultsAsync();
+            var query = _graphClient.Cypher.Create("(u:User { user })")
+                .WithParams(new { user });
+
+            query = AddRoles(query, user.Roles);
+
+            await query.ExecuteWithoutResultsAsync();
         }
 
         public async Task DeleteAsync(TUser user)
@@ -128,7 +164,8 @@ namespace Neo4j.AspNet.Identity
                 .Where((TUser u) => u.Id == user.Id)
                 .OptionalMatch(string.Format("(u)-[lr:{0}]->(l)", Relationship.HasLogin))
                 .OptionalMatch(string.Format("(u)-[cr:{0}]->(c)", Relationship.HasClaim))
-                .Delete("u,lr,cr,l,c")
+                .OptionalMatch(string.Format("(u)-[rl:{0}]->(r)", Relationship.InRole))
+                .Delete("u,lr,cr,l,c,rl")
                 .ExecuteWithoutResultsAsync();
         }
 
@@ -142,46 +179,25 @@ namespace Neo4j.AspNet.Identity
         {
             Throw.ArgumentException.IfNull(userId, "userId");
             ThrowIfDisposed();
-            
+
             var query = new CypherFluentQuery(_graphClient)
                 .Match("(u:User)")
                 .Where((TUser u) => u.Id == userId)
                 .OptionalMatch(string.Format("(u)-[lr:{0}]->(l:{1})", Relationship.HasLogin, Labels.Login))
                 .OptionalMatch(string.Format("(u)-[cr:{0}]->(c:{1})", Relationship.HasClaim, Labels.Claim))
-                .Return((u, c, l) => new FindUserResult<TUser>
+                .OptionalMatch(string.Format("(u)-[rl:{0}]->(r:{1})", Relationship.InRole, Labels.Role))
+                .Return((u, c, l, r) => new FindUserResult<TUser>
                 {
                     User = u.As<TUser>(),
                     Logins = l.CollectAs<Neo4jUserLoginInfo>(),
-                    Claims = c.CollectAs<IdentityUserClaim>()
+                    Claims = c.CollectAs<IdentityUserClaim>(),
+                    Roles = r.CollectAs<Role>()
                 });
 
             var user = (await query.ResultsAsync).SingleOrDefault();
 
-            if (user == null)
-                return null;
-
-            return user.Combine();
+            return user == null ? null : user.Combine();
         }
-
-        private class FindUserResult<T> 
-            where T : IdentityUser, new()
-        {
-            public T User { private get; set; } 
-            public IEnumerable<Node<Neo4jUserLoginInfo>> Logins { private get; set; }
-            public IEnumerable<Node<IdentityUserClaim>> Claims { private get; set; }
-
-            public T Combine()
-            {
-                var output = User;
-                if (Logins != null)
-                    output.Logins = new List<UserLoginInfo>(Logins.Select(l => l.Data.ToUserLoginInfo()));
-                if (Claims != null)
-                    output.Claims = new List<IdentityUserClaim>(Claims.Select(l => l.Data));
-                return output;
-            }
-        }
-
-
 
         public async Task<TUser> FindByNameAsync(string userName)
         {
@@ -193,79 +209,90 @@ namespace Neo4j.AspNet.Identity
                 .Where((TUser u) => u.UserName == userName)
                 .OptionalMatch(string.Format("(u)-[lr:{0}]->(l:{1})", Relationship.HasLogin, Labels.Login))
                 .OptionalMatch(string.Format("(u)-[cr:{0}]->(c:{1})", Relationship.HasClaim, Labels.Claim))
-                .Return((u, c, l) => new FindUserResult<TUser>
+                .OptionalMatch(string.Format("(u)-[rl:{0}]->(r:{1})", Relationship.InRole, Labels.Role))
+                .Return((u, c, l, r) => new FindUserResult<TUser>
                 {
                     User = u.As<TUser>(),
                     Logins = l.CollectAs<Neo4jUserLoginInfo>(),
-                    Claims = c.CollectAs<IdentityUserClaim>()
+                    Claims = c.CollectAs<IdentityUserClaim>(),
+                    Roles = r.CollectAs<Role>()
                 });
 
             var results = await query.ResultsAsync;
             var findUserResult = results.SingleOrDefault();
-//
-//            var user = (await _graphClient.Cypher
-//                .Match("(u:User)")
-//                .OptionalMatch(string.Format("(u)-[lr:{0}]->(l:{1})", Relationship.HasLogin, Labels.Login))
-//                .OptionalMatch(string.Format("(u)-[cr:{0}]->(c:{1})", Relationship.HasClaim, Labels.Claim))
-//                .Where((TUser u) => u.UserName == userName)
-//                .Return((u, c, l) => new FindUserResult<TUser>
-//                {
-//                    User = u.As<TUser>(),
-//                    Logins = l.CollectAs<Neo4jUserLoginInfo>(),
-//                    Claims = c.CollectAs<IdentityUserClaim>()
-//                })
-//                .ResultsAsync)
-//                .SingleOrDefault();
-
-            if (findUserResult == null)
-                return null;
-
-            return findUserResult.Combine();
+            return findUserResult == null ? null : findUserResult.Combine();
         }
 
         public async Task UpdateAsync(TUser user)
         {
             Throw.ArgumentException.IfNull(user, "user");
             ThrowIfDisposed();
-            
+
             var query = new CypherFluentQuery(_graphClient)
                 .Match("(u:User)")
                 .Where((TUser u) => u.Id == user.Id)
                 .Set("u = {userParam}")
-                .WithParam("userParam", user);
+                .WithParam("userParam", user)
+                .With("u").OptionalMatch("(u)-[cr:HAS_CLAIM]->(c:Claim)").Delete("c,cr")
+                .With("u").OptionalMatch("(u)-[lr:HAS_LOGIN]->(l:Login)").Delete("l,lr")
+                .With("u").OptionalMatch("(u)-[rl:IN_ROLE]->(r:Role)").Delete("rl");
 
-            if (user.Claims != null && user.Claims.Count > 0)
-            {
-                //CDS: There must be a better way - using proper ForEach mebbe?
-                query = query.With("u").OptionalMatch("(u)-[cr:HAS_CLAIM]->(c:Claim)").Delete("c,cr");
-                for (int i = 0; i < user.Claims.Count; i++)
-                {
-                    var claimName = string.Format("claim{0}", i);
-                    var claimParam = user.Claims[i];
-                    query = query.With("u")
-                        .Create("(u)-[:HAS_CLAIM]->(c" + i + ":claim {" + claimName + "})")
-                        .WithParam(claimName, claimParam);
-                }
-            }
-            if (user.Logins != null && user.Logins.Count > 0)
-            {
-                query = query.With("u").OptionalMatch("(u)-[lr:HAS_LOGIN]->(l:Login)").Delete("l,lr");
-                for(int i = 0; i< user.Logins.Count; i++)
-                {
-                    var loginName = string.Format("login{0}", i);
-                    var loginParam = user.Logins[i];
-                    query = query.With("u")
-                        .Create("(u)-[:HAS_LOGIN]->(l" + i +":Login {" + loginName + "})")
-                        .WithParam(loginName, loginParam);
-                }
-            }
-//            if (user.Roles != null && user.Roles.Count > 0)
-//            {
-//                //string -- stored automagically
-//            }
+            query = AddClaims(query, user.Claims);
+            query = AddLogins(query, user.Logins);
+            query = AddRoles(query, user.Roles);
 
             await query.ExecuteWithoutResultsAsync();
+        }
 
+        private static ICypherFluentQuery AddClaims(ICypherFluentQuery query, IList<IdentityUserClaim> claims)
+        {
+            if (claims == null || claims.Count == 0)
+                return query;
+
+            for (int i = 0; i < claims.Count; i++)
+            {
+                var claimName = string.Format("claim{0}", i);
+                var claimParam = claims[i];
+                query = query.With("u")
+                    .Create("(u)-[:HAS_CLAIM]->(c" + i + ":claim {" + claimName + "})")
+                    .WithParam(claimName, claimParam);
+            }
+            return query;
+        }
+
+        private static ICypherFluentQuery AddLogins(ICypherFluentQuery query, IList<UserLoginInfo> logins)
+        {
+            if (logins == null || logins.Count == 0)
+                return query;
+
+            for (int i = 0; i < logins.Count; i++)
+            {
+                var loginName = string.Format("login{0}", i);
+                var loginParam = logins[i];
+                query = query.With("u")
+                    .Create("(u)-[:HAS_LOGIN]->(l" + i + ":Login {" + loginName + "})")
+                    .WithParam(loginName, loginParam);
+            }
+            return query;
+        }
+
+        private static ICypherFluentQuery AddRoles(ICypherFluentQuery query, IList<string> roles)
+        {
+            if (roles == null || roles.Count == 0)
+                return query;
+
+            for (int i = 0; i < roles.Count; i++)
+            {
+                var role = roles[i];
+                var roleId = string.Format("r{0}", i);
+                var roleParamName = string.Format("{0}Param", roleId);
+                query = query.With("u")
+                    .Merge(string.Format("({0}:{1} {{Name:{{{2}}}}})", roleId, Labels.Role, roleParamName))
+                    .Merge(string.Format("(u)-[:IN_ROLE]->({0})", roleId))
+                    .WithParam(roleParamName, role);
+            }
+
+            return query;
         }
 
         public void Dispose()
@@ -280,37 +307,36 @@ namespace Neo4j.AspNet.Identity
         public async Task AddClaimAsync(TUser user, Claim claim)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(claim, "claim");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            if (!user.Claims.Any(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value))
+            await Task.Run(() =>
             {
-                user.Claims.Add(new IdentityUserClaim
+                if (!user.Claims.Any(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value))
                 {
-                    ClaimType = claim.Type,
-                    ClaimValue = claim.Value
-                });
-            }
+                    user.Claims.Add(new IdentityUserClaim
+                    {
+                        ClaimType = claim.Type,
+                        ClaimValue = claim.Value
+                    });
+                }
+            });
         }
 
         public async Task<IList<Claim>> GetClaimsAsync(TUser user)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            IList<Claim> result = user.Claims.Select(c => new Claim(c.ClaimType, c.ClaimValue)).ToList();
-            return result;
+            return await Task.Run(() => user.Claims.Select(c => new Claim(c.ClaimType, c.ClaimValue)).ToList());
         }
 
         public async Task RemoveClaimAsync(TUser user, Claim claim)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            user.Claims.RemoveAll(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value);
-            //CDS: Update DB???
+            await Task.Run(() => user.Claims.RemoveAll(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value));
         }
 
         #endregion
@@ -320,42 +346,38 @@ namespace Neo4j.AspNet.Identity
         public async Task AddToRoleAsync(TUser user, string roleName)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            if (!user.Roles.Contains(roleName, StringComparer.InvariantCultureIgnoreCase))
-                user.Roles.Add(roleName);
+            await Task.Run(() =>
+            {
+                if (!user.Roles.Contains(roleName, StringComparer.InvariantCultureIgnoreCase))
+                    user.Roles.Add(roleName);
+            });
 
-            //CDS: Update DB???
         }
 
         public async Task<IList<string>> GetRolesAsync(TUser user)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            return user.Roles;
+            return await Task.Run(() => user.Roles);
         }
 
         public async Task<bool> IsInRoleAsync(TUser user, string roleName)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            return user.Roles.Contains(roleName, StringComparer.InvariantCultureIgnoreCase);
+            return await Task.Run(() => user.Roles.Contains(roleName, StringComparer.InvariantCultureIgnoreCase));
         }
 
         public async Task RemoveFromRoleAsync(TUser user, string roleName)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            user.Roles.RemoveAll(r => String.Equals(r, roleName, StringComparison.InvariantCultureIgnoreCase));
-
-            //CDS: Update DB???
+            await Task.Run(() => user.Roles.RemoveAll(r => String.Equals(r, roleName, StringComparison.InvariantCultureIgnoreCase)));
         }
 
         #endregion
@@ -365,29 +387,25 @@ namespace Neo4j.AspNet.Identity
         public async Task<string> GetPasswordHashAsync(TUser user)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            return user.PasswordHash;
+            return await Task.Run(() => user.PasswordHash);
         }
 
         public async Task<bool> HasPasswordAsync(TUser user)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            return user.PasswordHash != null;
+            return await Task.Run(() => user.PasswordHash != null);
         }
 
         public async Task SetPasswordHashAsync(TUser user, string passwordHash)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            user.PasswordHash = passwordHash;
-            //CDS: Update DB???
+            await Task.Run(() => user.PasswordHash = passwordHash);
         }
 
         #endregion
@@ -397,20 +415,17 @@ namespace Neo4j.AspNet.Identity
         public async Task<string> GetSecurityStampAsync(TUser user)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            return user.SecurityStamp;
+            return await Task.Run(() => user.SecurityStamp);
         }
 
         public async Task SetSecurityStampAsync(TUser user, string stamp)
         {
             ThrowIfDisposed();
-            if (user == null)
-                throw new ArgumentNullException("user");
+            Throw.ArgumentException.IfNull(user, "user");
 
-            user.SecurityStamp = stamp;
-            //CDS: Surely this needs to be stored in DB?
+            await Task.Run(() => user.SecurityStamp = stamp);
         }
 
         #endregion
@@ -421,12 +436,11 @@ namespace Neo4j.AspNet.Identity
         {
             ThrowIfDisposed();
 
-            var user = _graphClient.Cypher
+            var user = (await _graphClient.Cypher
                 .Match("(u:User)")
                 .Where((TUser u) => u.Email == email)
                 .Return(u => u.As<TUser>())
-                .Results
-                .SingleOrDefault();
+                .ResultsAsync).SingleOrDefault();
 
             //TUser user = db.GetCollection<TUser>(collectionName).FindOne((Query.EQ("email", email)));
             return user;
@@ -435,6 +449,9 @@ namespace Neo4j.AspNet.Identity
         public async Task<string> GetEmailAsync(TUser user)
         {
             ThrowIfDisposed();
+
+            if (user.Id == null)
+                return user.Email;
 
             var results = await _graphClient.Cypher
                 .Match("(u:User)")
@@ -470,7 +487,7 @@ namespace Neo4j.AspNet.Identity
 
         public async Task SetLockoutEndDateAsync(TUser user, DateTimeOffset lockoutEnd)
         {
-            
+
         }
 
         public async Task<int> IncrementAccessFailedCountAsync(TUser user)
@@ -499,7 +516,7 @@ namespace Neo4j.AspNet.Identity
 
         public async Task SetTwoFactorEnabledAsync(TUser user, bool enabled)
         {
-            
+
         }
 
         public async Task<bool> GetTwoFactorEnabledAsync(TUser user)
