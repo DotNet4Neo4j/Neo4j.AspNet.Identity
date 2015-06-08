@@ -29,11 +29,10 @@ These instructions assume you know how to set up Neo4j within an MVC application
 
 1. Create a new ASP.NET MVC 5 project, choosing the Individual User Accounts authentication type.
     1. Update all Nuget packages to latest versions (in particular 'Microsoft ASP.NET Identity Core')
-    2. Install-Package Neo4jClient
+    2. Install-Package Neo4j.Aspnet.Identity
     3. Remove the Entity Framework packages and replace with Neo4j Identity:
         1. Uninstall-Package Microsoft.AspNet.Identity.EntityFramework
         2. Uninstall-Package EntityFramework
-    4. Reference the dll you've built, or even better add the project to your solution and reference it directly
 
 2. Delete ~/Models/IdentityModels.cs
 3. In ~/App_Start/IndentityConfig.cs
