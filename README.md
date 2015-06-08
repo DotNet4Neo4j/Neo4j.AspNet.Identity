@@ -45,8 +45,7 @@ These instructions assume you know how to set up Neo4j within an MVC application
     1. Add 'using Neo4j.AspNet.Identity'
     2. Add the following Method:
 
-
-
+    ```
     private void ConfigureNeo4j(IAppBuilder app)
     {
         app.CreatePerOwinContext(() => {
@@ -56,8 +55,7 @@ These instructions assume you know how to set up Neo4j within an MVC application
             return gcw;
         });
     }
-
-
+    ```
 
     3. Replace the line about creating the ApplicationDbContext (app.CreatePerOwinContext(ApplicationDbContext.Create);) with:
 
