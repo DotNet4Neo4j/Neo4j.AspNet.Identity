@@ -49,10 +49,6 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Neo4j.AspNet.Identity, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Neo4j.AspNet.Identity.1.1.0.0\lib\Neo4j.AspNet.Identity.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="Neo4jClient, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Neo4jClient.1.0.0.662\lib\net40\Neo4jClient.dll</HintPath>
       <Private>True</Private>
@@ -241,6 +237,12 @@
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
     <Content Include="packages.config" />
     <None Include="Project_Readme.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Neo4j.AspNet.Identity\Neo4j.AspNet.Identity.csproj">
+      <Project>{5c064d09-34b3-45e6-b745-639974ade706}</Project>
+      <Name>Neo4j.AspNet.Identity</Name>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

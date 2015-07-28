@@ -1,5 +1,6 @@
 ﻿namespace Neo4j.AspNet.Identity.Tests
 {
+    using System;
     using FluentAssertions;
     using Xunit;
 
@@ -16,6 +17,16 @@
                 var user = new IdentityUser(username);
                 user.UserName.Should().Be(expectedUsername);
             }
+
+            [Theory]
+            [InlineData(null)]
+            [InlineData("")]
+            [InlineData(" ")]
+            public void ThrowsArgumentException_WhenUsernameIsNullOrWhitespace(string username)
+            {
+                var ex = Record.Exception(() => new IdentityUser(username));
+                ex.Should().BeOfType<ArgumentException>();
+            }
         }
 
         public class UsernameProperty
@@ -28,6 +39,16 @@
             {
                 var user = new IdentityUser {UserName = username};
                 user.UserName.Should().Be(expectedUsername);
+            }
+
+            [Theory]
+            [InlineData(null)]
+            [InlineData("")]
+            [InlineData(" ")]
+            public void ThrowsArgumentException_WhenUsernameIsNullOrWhitespace(string username)
+            {
+                var ex = Record.Exception(() => new IdentityUser {UserName = username});
+                ex.Should().BeOfType<ArgumentException>();
             }
         }
     }
