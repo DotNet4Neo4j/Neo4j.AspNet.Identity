@@ -5,14 +5,30 @@
 
     public class IdentityUserTests
     {
-        [Theory]
-        [InlineData("A@A.COM", "a@a.com")]
-        [InlineData("a@A.com", "a@a.com")]
-        [InlineData("a@a.com", "a@a.com")]
-        public void IgnoresCaseForUserName(string username, string expectedUsername)
+        public class Constructor
         {
-            var user = new IdentityUser(username);
-            user.UserName.Should().Be(expectedUsername);
+            [Theory]
+            [InlineData("A@A.COM", "a@a.com")]
+            [InlineData("a@A.com", "a@a.com")]
+            [InlineData("a@a.com", "a@a.com")]
+            public void IgnoresCaseForUserName(string username, string expectedUsername)
+            {
+                var user = new IdentityUser(username);
+                user.UserName.Should().Be(expectedUsername);
+            }
+        }
+
+        public class UsernameProperty
+        {
+            [Theory]
+            [InlineData("A@A.COM", "a@a.com")]
+            [InlineData("a@A.com", "a@a.com")]
+            [InlineData("a@a.com", "a@a.com")]
+            public void IgnoresCaseForUserName(string username, string expectedUsername)
+            {
+                var user = new IdentityUser {UserName = username};
+                user.UserName.Should().Be(expectedUsername);
+            }
         }
     }
 }

@@ -1,12 +1,15 @@
 ﻿namespace Neo4j.AspNet.Identity
 {
     using System;
+    using System.CodeDom;
     using System.Collections.Generic;
     using Microsoft.AspNet.Identity;
     using Newtonsoft.Json;
 
     public class IdentityUser : IUser
     {
+        private string _userName;
+
         public IdentityUser()
         {
             Claims = new List<IdentityUserClaim>();
@@ -18,6 +21,7 @@
         public IdentityUser(string username)
             : this()
         {
+            Throw.ArgumentException.IfNullOrWhiteSpace(username, "username");
             UserName = username.ToLowerInvariant().Trim();
         }
 
@@ -38,6 +42,15 @@
         public virtual List<UserLoginInfo> Logins { get; set; }
 
         public virtual string Id { get; set; }
-        public virtual string UserName { get; set; }
+
+        public virtual string UserName
+        {
+            get { return _userName; }
+            set
+            {
+                Throw.ArgumentException.IfNullOrWhiteSpace(value, "value");
+                _userName = value.ToLowerInvariant().Trim();
+            }
+        }
     }
 }
