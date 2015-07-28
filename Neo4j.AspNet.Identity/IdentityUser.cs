@@ -18,7 +18,7 @@
         public IdentityUser(string username)
             : this()
         {
-            UserName = username;
+            UserName = username.ToLowerInvariant().Trim();
         }
 
         public string DisplayName { get; set; }
