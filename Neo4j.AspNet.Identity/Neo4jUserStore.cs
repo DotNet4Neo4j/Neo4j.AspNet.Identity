@@ -38,7 +38,7 @@ namespace Neo4j.AspNet.Identity
 
         #region Internal Classes for Serialization
 
-        private class FindUserResult<T>
+        internal class FindUserResult<T>
             where T : IdentityUser, new()
         {
             public T User { private get; set; }
@@ -60,13 +60,13 @@ namespace Neo4j.AspNet.Identity
         }
 
         // ReSharper disable once ClassNeverInstantiated.Local
-        private class Role
+        internal class Role
         {
             public string Name { get; set; }
         }
         
         // ReSharper disable once ClassNeverInstantiated.Local
-        private class Neo4jUserLoginInfo
+        internal class Neo4jUserLoginInfo
         {
             /// <summary>
             ///     Provider for the linked login, i.e. Facebook, Google, etc.
@@ -201,8 +201,10 @@ namespace Neo4j.AspNet.Identity
 
         public async Task<TUser> FindByNameAsync(string userName)
         {
-            Throw.ArgumentException.IfNull(userName, "userName");
+            Throw.ArgumentException.IfNullOrWhiteSpace(userName, "userName");
             ThrowIfDisposed();
+
+            userName = userName.ToLowerInvariant().Trim();
 
             var query = new CypherFluentQuery(_graphClient)
                 .Match("(u:User)")
@@ -435,15 +437,14 @@ namespace Neo4j.AspNet.Identity
         public async Task<TUser> FindByEmailAsync(string email)
         {
             ThrowIfDisposed();
+            email = email.ToLowerInvariant().Trim();
 
-            var user = (await _graphClient.Cypher
+            var query = new CypherFluentQuery(_graphClient)
                 .Match("(u:User)")
                 .Where((TUser u) => u.Email == email)
-                .Return(u => u.As<TUser>())
-                .ResultsAsync).SingleOrDefault();
+                .Return(u => u.As<TUser>());
 
-            //TUser user = db.GetCollection<TUser>(collectionName).FindOne((Query.EQ("email", email)));
-            return user;
+            return (await query.ResultsAsync).SingleOrDefault();
         }
 
         public async Task<string> GetEmailAsync(TUser user)

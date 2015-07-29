@@ -19,6 +19,17 @@
             }
 
             [Theory]
+            [InlineData("a@a.com ", "a@a.com")]
+            [InlineData(" a@a.com", "a@a.com")]
+            [InlineData(" a@a.com ", "a@a.com")]
+            public void TrimsUserName(string username, string expectedUsername)
+            {
+                var user = new IdentityUser(username);
+                user.UserName.Should().Be(expectedUsername);
+            }
+
+
+            [Theory]
             [InlineData(null)]
             [InlineData("")]
             [InlineData(" ")]
@@ -38,6 +49,16 @@
             public void IgnoresCaseForUserName(string username, string expectedUsername)
             {
                 var user = new IdentityUser {UserName = username};
+                user.UserName.Should().Be(expectedUsername);
+            }
+
+            [Theory]
+            [InlineData("a@a.com ", "a@a.com")]
+            [InlineData(" a@a.com", "a@a.com")]
+            [InlineData(" a@a.com ", "a@a.com")]
+            public void TrimsUsername(string username, string expectedUsername)
+            {
+                var user = new IdentityUser { UserName = username };
                 user.UserName.Should().Be(expectedUsername);
             }
 
