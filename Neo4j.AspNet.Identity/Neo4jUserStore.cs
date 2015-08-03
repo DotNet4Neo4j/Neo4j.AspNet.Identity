@@ -42,19 +42,19 @@ namespace Neo4j.AspNet.Identity
             where T : IdentityUser, new()
         {
             public T User { private get; set; }
-            public IEnumerable<Node<Neo4jUserLoginInfo>> Logins { private get; set; }
-            public IEnumerable<Node<IdentityUserClaim>> Claims { private get; set; }
-            public IEnumerable<Node<Role>> Roles { private get; set; }
+            public IEnumerable<Neo4jUserLoginInfo> Logins { private get; set; }
+            public IEnumerable<IdentityUserClaim> Claims { private get; set; }
+            public IEnumerable<Role> Roles { private get; set; }
 
             public T Combine()
             {
                 var output = User;
                 if (Logins != null)
-                    output.Logins = new List<UserLoginInfo>(Logins.Select(l => l.Data.ToUserLoginInfo()));
+                    output.Logins = new List<UserLoginInfo>(Logins.Select(l => l.ToUserLoginInfo()));
                 if (Claims != null)
-                    output.Claims = new List<IdentityUserClaim>(Claims.Select(l => l.Data));
+                    output.Claims = new List<IdentityUserClaim>(Claims);
                 if (Roles != null)
-                    output.Roles = new List<string>(Roles.Select(r => r.Data.Name));
+                    output.Roles = new List<string>(Roles.Select(r => r.Name));
                 return output;
             }
         }
