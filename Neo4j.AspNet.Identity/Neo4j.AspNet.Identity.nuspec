@@ -7,7 +7,7 @@
     <owners>cskardon, assimoes</owners>
     <licenseUrl>https://github.com/cskardon/Neo4j.AspNet.Identity/blob/master/LICENSE</licenseUrl>
     <projectUrl>https://github.com/cskardon/Neo4j.AspNet.Identity</projectUrl>
-    <description></description>
+    <description>A Neo4j based identity provider for ASP.NET.</description>
     <tags>neo4j nosql cypher aspnet identity mvc</tags>
     <dependencies>
       <dependency id="Neo4jClient" version="1.0.0.662"/>
