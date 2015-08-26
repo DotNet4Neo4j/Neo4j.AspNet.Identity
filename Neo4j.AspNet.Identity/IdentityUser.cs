@@ -24,15 +24,20 @@
             Throw.ArgumentException.IfNullOrWhiteSpace(username, "username");
             UserName = username.ToLowerInvariant().Trim();
         }
-
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string DisplayName { get; set; }
         public DateTimeOffset LastLoginDateUtc { get; set; }
         public DateTimeOffset CreateDateUtc { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string PhoneNumber { get; set; }
         public bool PhoneNumberConfirmed { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public virtual string PasswordHash { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public virtual string SecurityStamp { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public virtual string Email { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public virtual List<string> Roles { get; set; }
 
         [JsonIgnore]
@@ -41,8 +46,10 @@
         [JsonIgnore]
         public virtual List<UserLoginInfo> Logins { get; set; }
 
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public virtual string Id { get; set; }
 
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public virtual string UserName
         {
             get { return _userName; }

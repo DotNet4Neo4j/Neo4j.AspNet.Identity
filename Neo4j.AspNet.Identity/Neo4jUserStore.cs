@@ -44,8 +44,7 @@ namespace Neo4j.AspNet.Identity
             public T User { private get; set; }
             public IEnumerable<Neo4jUserLoginInfo> Logins { private get; set; }
             public IEnumerable<IdentityUserClaim> Claims { private get; set; }
-            public IEnumerable<Role> Roles { private get; set; }
-
+            
             public T Combine()
             {
                 var output = User;
@@ -53,8 +52,7 @@ namespace Neo4j.AspNet.Identity
                     output.Logins = new List<UserLoginInfo>(Logins.Select(l => l.ToUserLoginInfo()));
                 if (Claims != null)
                     output.Claims = new List<IdentityUserClaim>(Claims);
-                if (Roles != null)
-                    output.Roles = new List<string>(Roles.Select(r => r.Name));
+            
                 return output;
             }
         }
@@ -109,13 +107,11 @@ namespace Neo4j.AspNet.Identity
                 .Where((UserLoginInfo l) => l.ProviderKey == login.ProviderKey)
                 .AndWhere((UserLoginInfo l) => l.LoginProvider == login.LoginProvider)
                 .OptionalMatch(string.Format("(u)-[:{0}]->(c:{1})", Relationship.HasClaim, Labels.Claim))
-                .OptionalMatch(string.Format("(u)-[:{0}]->(r:{1})", Relationship.InRole, Labels.Role))
-                .Return((u, c, l, r) => new FindUserResult<TUser>
+                .Return((u, c, l) => new FindUserResult<TUser>
                 {
                     User = u.As<TUser>(),
                     Logins = l.CollectAs<Neo4jUserLoginInfo>(),
-                    Claims = c.CollectAs<IdentityUserClaim>(),
-                    Roles = r.CollectAs<Role>()
+                    Claims = c.CollectAs<IdentityUserClaim>()
                 }).ResultsAsync;
 
             var result = results.SingleOrDefault();
@@ -145,11 +141,11 @@ namespace Neo4j.AspNet.Identity
             Throw.ArgumentException.IfNull(user, "user");
             ThrowIfDisposed();
 
-            user.Id = Guid.NewGuid().ToString();
+            if(string.IsNullOrWhiteSpace(user.Id))
+                user.Id = Guid.NewGuid().ToString();
+
             var query = _graphClient.Cypher.Create("(u:User { user })")
                 .WithParams(new { user });
-
-            query = AddRoles(query, user.Roles);
 
             await query.ExecuteWithoutResultsAsync();
         }
@@ -164,8 +160,7 @@ namespace Neo4j.AspNet.Identity
                 .Where((TUser u) => u.Id == user.Id)
                 .OptionalMatch(string.Format("(u)-[lr:{0}]->(l)", Relationship.HasLogin))
                 .OptionalMatch(string.Format("(u)-[cr:{0}]->(c)", Relationship.HasClaim))
-                .OptionalMatch(string.Format("(u)-[rl:{0}]->(r)", Relationship.InRole))
-                .Delete("u,lr,cr,l,c,rl")
+                .Delete("u,lr,cr,l,c")
                 .ExecuteWithoutResultsAsync();
         }
 
@@ -185,13 +180,11 @@ namespace Neo4j.AspNet.Identity
                 .Where((TUser u) => u.Id == userId)
                 .OptionalMatch(string.Format("(u)-[lr:{0}]->(l:{1})", Relationship.HasLogin, Labels.Login))
                 .OptionalMatch(string.Format("(u)-[cr:{0}]->(c:{1})", Relationship.HasClaim, Labels.Claim))
-                .OptionalMatch(string.Format("(u)-[rl:{0}]->(r:{1})", Relationship.InRole, Labels.Role))
-                .Return((u, c, l, r) => new FindUserResult<TUser>
+                .Return((u, c, l) => new FindUserResult<TUser>
                 {
                     User = u.As<TUser>(),
                     Logins = l.CollectAs<Neo4jUserLoginInfo>(),
                     Claims = c.CollectAs<IdentityUserClaim>(),
-                    Roles = r.CollectAs<Role>()
                 });
 
             var user = (await query.ResultsAsync).SingleOrDefault();
@@ -211,13 +204,11 @@ namespace Neo4j.AspNet.Identity
                 .Where((TUser u) => u.UserName == userName)
                 .OptionalMatch(string.Format("(u)-[lr:{0}]->(l:{1})", Relationship.HasLogin, Labels.Login))
                 .OptionalMatch(string.Format("(u)-[cr:{0}]->(c:{1})", Relationship.HasClaim, Labels.Claim))
-                .OptionalMatch(string.Format("(u)-[rl:{0}]->(r:{1})", Relationship.InRole, Labels.Role))
-                .Return((u, c, l, r) => new FindUserResult<TUser>
+                .Return((u, c, l) => new FindUserResult<TUser>
                 {
                     User = u.As<TUser>(),
                     Logins = l.CollectAs<Neo4jUserLoginInfo>(),
                     Claims = c.CollectAs<IdentityUserClaim>(),
-                    Roles = r.CollectAs<Role>()
                 });
 
             var results = await query.ResultsAsync;
@@ -241,7 +232,6 @@ namespace Neo4j.AspNet.Identity
 
             query = AddClaims(query, user.Claims);
             query = AddLogins(query, user.Logins);
-            query = AddRoles(query, user.Roles);
 
             await query.ExecuteWithoutResultsAsync();
         }
@@ -278,24 +268,7 @@ namespace Neo4j.AspNet.Identity
             return query;
         }
 
-        private static ICypherFluentQuery AddRoles(ICypherFluentQuery query, IList<string> roles)
-        {
-            if (roles == null || roles.Count == 0)
-                return query;
 
-            for (int i = 0; i < roles.Count; i++)
-            {
-                var role = roles[i];
-                var roleId = string.Format("r{0}", i);
-                var roleParamName = string.Format("{0}Param", roleId);
-                query = query.With("u")
-                    .Merge(string.Format("({0}:{1} {{Name:{{{2}}}}})", roleId, Labels.Role, roleParamName))
-                    .Merge(string.Format("(u)-[:IN_ROLE]->({0})", roleId))
-                    .WithParam(roleParamName, role);
-            }
-
-            return query;
-        }
 
         public void Dispose()
         {
