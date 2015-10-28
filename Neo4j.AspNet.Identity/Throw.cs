@@ -5,7 +5,7 @@ namespace Neo4j.AspNet.Identity
     /// <summary>
     ///     Static helper class to throw a new <see cref="Exception" />.
     /// </summary>
-    public static class Throw
+    internal static class Throw
     {
         /// <summary>
         ///     Static helper class to throw a new <see cref="System.ArgumentException" />
