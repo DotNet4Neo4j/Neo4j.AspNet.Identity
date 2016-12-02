@@ -1,5 +1,6 @@
 namespace Neo4j.AspNet.Identity
 {
+    using System;
     using Microsoft.AspNet.Identity;
 
     /// <summary>Consts for the Relationships used throughout Neo4j.</summary>
@@ -16,7 +17,10 @@ namespace Neo4j.AspNet.Identity
     {
         /// <summary>Login label, used by <see cref="UserLoginInfo"/> class.</summary>
         public const string Login = "Login";
+
+
         /// <summary>User label, used by <see cref="ApplicationUser"/> class.</summary>
+        [Obsolete("Should not be used, as ApplicationUser.Labels will be used (if not set by user)")]
         public const string User = "User";
 
         /// <summary>Claim label, used by <see cref="IdentityUserClaim"/> class.</summary>

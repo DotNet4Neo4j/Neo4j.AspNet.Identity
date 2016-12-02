@@ -10,6 +10,33 @@
 
     public class Neo4jUserStoreTests
     {
+        public class Constructor
+        {
+            [Fact]
+            public async Task UserLabelPassedInIsUsed()
+            {
+                const string newUserLabel = "Foo";
+                var mockGraphClient = new Mock<IRawGraphClient>();
+                var userStore = new Neo4jUserStore<IdentityUser>(mockGraphClient.Object, newUserLabel);
+
+                await userStore.FindByEmailAsync("n.e@email.com");
+                mockGraphClient.Verify(gc => gc.ExecuteGetCypherResultsAsync<IdentityUser>(It.Is<CypherQuery>(actual => actual.DebugQueryText.Contains("(u:Foo)"))), Times.Once);
+            }
+
+            [Theory]
+            [InlineData("")]
+            [InlineData(" ")]
+            [InlineData(null)]
+            public async Task DefaultLabelUsedIfPassedInIsNullOrWhiteSpace(string label)
+            {
+                var mockGraphClient = new Mock<IRawGraphClient>();
+                var userStore = new Neo4jUserStore<IdentityUser>(mockGraphClient.Object, label);
+
+                await userStore.FindByEmailAsync("n.e@email.com");
+                mockGraphClient.Verify(gc => gc.ExecuteGetCypherResultsAsync<IdentityUser>(It.Is<CypherQuery>(actual => actual.DebugQueryText.Contains("(u:User)"))), Times.Once);
+            }
+        }
+
         public class FindByEmailAsyncMethod
         {
             [Theory]
@@ -41,8 +68,8 @@
             }
         }
 
-        private static Mock<IRawGraphClient> MockGraphClient {  get {  return new Mock<IRawGraphClient>();} }
-        private static IGraphClient GraphClient { get { return MockGraphClient.Object; } }
+        private static Mock<IRawGraphClient> MockGraphClient => new Mock<IRawGraphClient>();
+        private static IGraphClient GraphClient => MockGraphClient.Object;
 
         public class FindByNameAsyncMethod
         {
