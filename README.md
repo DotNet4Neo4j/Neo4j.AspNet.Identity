@@ -10,7 +10,7 @@ ASP.NET MVC 5 shipped with a new Identity system (in the Microsoft.AspNet.Identi
 ### Current Builds
 
 [![Neo4j.AspNet.Identity Version Number](https://img.shields.io/nuget/v/Neo4j.AspNet.Identity.svg)](https://www.nuget.org/packages/Neo4j.AspNet.Identity/)
-[![cskardon MyGet Build Status](https://www.myget.org/BuildSource/Badge/cskardon?identifier=2ee7d34b-7177-47c2-abd4-ec9ec179b926)](https://www.myget.org/)
+[![cskardon MyGet Build Status](https://www.myget.org/BuildSource/Badge/cskardon?identifier=d52e5cea-7c14-4043-86b8-97495ebbb5c4)](https://www.myget.org/)
 
 ### Features
 
@@ -40,7 +40,7 @@ These instructions assume you know how to set up Neo4j within an MVC application
         2. Uninstall-Package EntityFramework
 
 2. Delete ~/Models/IdentityModels.cs
-3. In ~/App_Start/IndentityConfig.cs
+3. In ~/App_Start/IdentityConfig.cs
     1. Change the 'ApplicationUserManager' to use the Neo4jUserStore (as below)
     2. Change the 'ApplicationUserManager' to get the GraphClient from Owin (as below)
 
@@ -62,7 +62,11 @@ These instructions assume you know how to set up Neo4j within an MVC application
     }
     ```
 
-    3. Replace the line about creating the ApplicationDbContext (app.CreatePerOwinContext(ApplicationDbContext.Create);) with:
+    3. Replace the line about creating the ApplicationDbContext:
+    
+    `app.CreatePerOwinContext(ApplicationDbContext.Create);`
+    
+    with:
 
     `ConfigureNeo4j(app);`
 
