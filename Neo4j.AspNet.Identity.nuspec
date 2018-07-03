@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>Neo4j.AspNet.Identity</id>
-    <version>0.0.0.0</version>
+    <version>$version$</version>
     <authors>Antonio Sergio Simoes, Chris Skardon</authors>
     <owners>cskardon, assimoes</owners>
     <licenseUrl>https://github.com/cskardon/Neo4j.AspNet.Identity/blob/master/LICENSE</licenseUrl>
@@ -10,14 +10,14 @@
     <description>A Neo4j based identity provider for ASP.NET.</description>
     <tags>neo4j nosql cypher aspnet identity mvc</tags>
     <dependencies>
-      <dependency id="Neo4jClient" version="1.1.0.4"/>
-      <dependency id="Newtonsoft.Json" version="7.0.1" />
+      <dependency id="Neo4jClient" version="3.0.1.15"/>
+      <dependency id="Newtonsoft.Json" version="9.0.1" />
       <dependency id="Microsoft.AspNet.Identity.Core" version="2.2.1" />
     </dependencies>
   </metadata>
   <files>
-    <file src="bin\Release\Neo4j.AspNet.Identity.dll" target="lib\net40" />
-    <file src="bin\Release\Neo4j.AspNet.Identity.pdb" target="lib\net40" />
-    <file src="bin\Release\Neo4j.AspNet.Identity.xml" target="lib\net40" />
+    <file src="bin\$configuration$\Neo4j.AspNet.Identity.dll" target="lib\net452" />
+    <file src="bin\$configuration$\Neo4j.AspNet.Identity.pdb" target="lib\net452" />
+    <file src="bin\$configuration$\Neo4j.AspNet.Identity.xml" target="lib\net452" />
   </files>
 </package>

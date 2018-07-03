@@ -7,10 +7,14 @@ Custom ASP.NET Identity provider for the Neo4j Graph Database
 
 ASP.NET MVC 5 shipped with a new Identity system (in the Microsoft.AspNet.Identity.Core package) in order to support both local login and remote logins via OpenID/OAuth, but only ships with an Entity Framework provider (Microsoft.AspNet.Identity.EntityFramework).
 
+## Breaking Changes in 2.x
+
+* Upgraded [Neo4jClient](http://www.github.com/readify/neo4jclient) to 3.x - adding Bolt Support.
+  * You will need 2.x if you're using Neo4jClient 3+
+
 ### Current Builds
 
-[![Neo4j.AspNet.Identity Version Number](https://img.shields.io/nuget/v/Neo4j.AspNet.Identity.svg)](https://www.nuget.org/packages/Neo4j.AspNet.Identity/)
-[![cskardon MyGet Build Status](https://www.myget.org/BuildSource/Badge/cskardon?identifier=d52e5cea-7c14-4043-86b8-97495ebbb5c4)](https://www.myget.org/)
+[![Build status](https://ci.appveyor.com/api/projects/status/t4c5kr2j8j2tfh0c?svg=true)](https://ci.appveyor.com/project/ChrisSkardon/neo4j-aspnet-identity)
 
 ### Features
 
