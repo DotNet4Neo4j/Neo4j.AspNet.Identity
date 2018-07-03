@@ -16,8 +16,8 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="bin\$configuration$\Neo4j.AspNet.Identity.dll" target="lib\net452" />
-    <file src="bin\$configuration$\Neo4j.AspNet.Identity.pdb" target="lib\net452" />
-    <file src="bin\$configuration$\Neo4j.AspNet.Identity.xml" target="lib\net452" />
+    <file src="Neo4j.AspNet.Identity\bin\$configuration$\Neo4j.AspNet.Identity.dll" target="lib\net452" />
+    <file src="Neo4j.AspNet.Identity\bin\$configuration$\Neo4j.AspNet.Identity.pdb" target="lib\net452" />
+    <file src="Neo4j.AspNet.Identity\bin\$configuration$\Neo4j.AspNet.Identity.xml" target="lib\net452" />
   </files>
 </package>
